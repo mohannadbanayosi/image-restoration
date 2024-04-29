@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 from PIL import Image
 from torchvision import transforms
@@ -36,3 +37,14 @@ def prepare_dataset(device, base_path):
 
     print(f"{len(training_dataset)=}")
     return training_dataset
+
+def get_batch(batch_size, training_dataset):
+    original_images = []
+    noisy_images = []
+    for _ in range(batch_size):
+        image_name = random.choice(training_dataset)
+        input_image, noisy_input_image = image_name
+
+        original_images.append(input_image)
+        noisy_images.append(noisy_input_image)
+    return original_images, noisy_images
