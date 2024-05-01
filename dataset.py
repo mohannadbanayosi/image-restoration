@@ -1,5 +1,6 @@
 import os
 import random
+import numpy as np
 import torch
 from PIL import Image
 from torchvision import transforms
@@ -48,3 +49,12 @@ def get_batch(batch_size, training_dataset):
         original_images.append(input_image)
         noisy_images.append(noisy_input_image)
     return original_images, noisy_images
+
+def calculate_psnr(base_image, modified_image):
+    """Peak Signal-to-Noise Ratio"""
+    mse = np.mean((base_image - modified_image) ** 2)
+    if mse == 0:
+        return float('inf')
+    max_pixel = 1.0
+    psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
+    return psnr
