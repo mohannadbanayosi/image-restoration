@@ -20,7 +20,11 @@ print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-training_dataset = prepare_dataset(device, "IMAGES_PATH")
+dataset = prepare_dataset(device, "IMAGES_PATH")
+n = int(0.9*len(dataset))
+training_dataset = dataset[:n]
+validation_dataset = dataset[n:]
+print(f"{len(training_dataset)=}", f"{len(validation_dataset)=}")
 
 @torch.no_grad()
 def calculate_batch_psnr(batch_input_images, output_image):
@@ -42,7 +46,7 @@ def estimate_loss():
         losses = torch.zeros(eval_iters)
         psnrs = torch.zeros(eval_iters)
         for k in range(eval_iters):
-            original_images, noisy_images = get_batch_random(batch_size, training_dataset)
+            original_images, noisy_images = get_batch_random(batch_size, training_dataset if split == "train" else validation_dataset)
             batch_input_images = torch.stack(original_images)
             batch_noisy_images = torch.stack(noisy_images)
             output_image = model(batch_noisy_images)
