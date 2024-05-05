@@ -9,8 +9,8 @@ from model import DenoisingAutoencoder
 batch_size = 256
 learning_rate = 0.0005
 max_iters = 20000
-eval_interval = 100
-eval_iters = 50
+eval_interval = 200
+eval_iters = 20
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 model = DenoisingAutoencoder().to(device)
