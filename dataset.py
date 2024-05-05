@@ -42,30 +42,24 @@ def prepare_dataset(device, base_path):
     print(f"{len(training_dataset)=}")
     return training_dataset
 
-def get_batch_random(batch_size, dataset):
-    original_images = []
-    noisy_images = []
-    for _ in range(batch_size):
-        input_image, noisy_input_image = random.choice(dataset)
-
-        original_images.append(input_image)
-        noisy_images.append(noisy_input_image)
-    return original_images, noisy_images
-
-def get_batch(batch_size, dataset):
+def get_batch(batch_size, dataset, selection_mode = "random"):
     global training_dataset_index, epoch
     original_images = []
     noisy_images = []
     for _ in range(batch_size):
-        training_dataset_index = training_dataset_index % len(dataset)
-        if training_dataset_index == 0:
-            epoch += 1
-        input_image, noisy_input_image = dataset[training_dataset_index]
+        if selection_mode == "iterative":
+            training_dataset_index = training_dataset_index % len(dataset)
+            if training_dataset_index == 0:
+                epoch += 1
+            input_image, noisy_input_image = dataset[training_dataset_index]
+            training_dataset_index += 1
+        elif selection_mode == "random":
+            input_image, noisy_input_image = random.choice(dataset)
+        else:
+            raise ValueError(f"Incorrect value set for selection_mode: {selection_mode}")
 
         original_images.append(input_image)
         noisy_images.append(noisy_input_image)
-
-        training_dataset_index += 1
     return original_images, noisy_images
 
 def calculate_psnr(base_image, modified_image):

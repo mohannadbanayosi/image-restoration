@@ -2,14 +2,14 @@ import time
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from dataset import calculate_psnr, get_batch, get_batch_random, prepare_dataset
+from dataset import calculate_psnr, get_batch, prepare_dataset
 from model import DenoisingAutoencoder
 
 # Hyperparameters
 batch_size = 256
 learning_rate = 0.0005
 max_iters = 20000
-eval_interval = 200
+eval_interval = 1000
 eval_iters = 20
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
@@ -46,7 +46,7 @@ def estimate_loss():
         losses = torch.zeros(eval_iters)
         psnrs = torch.zeros(eval_iters)
         for k in range(eval_iters):
-            original_images, noisy_images = get_batch_random(batch_size, training_dataset if split == "train" else validation_dataset)
+            original_images, noisy_images = get_batch(batch_size, training_dataset if split == "train" else validation_dataset, selection_mode="random")
             batch_input_images = torch.stack(original_images)
             batch_noisy_images = torch.stack(noisy_images)
             output_image = model(batch_noisy_images)
@@ -62,7 +62,7 @@ def estimate_loss():
 
 with tqdm(total=max_iters, desc=f"{batch_size=}") as pbar:
     for iter in range(max_iters):
-        original_images, noisy_images = get_batch(batch_size, training_dataset)
+        original_images, noisy_images = get_batch(batch_size, training_dataset, selection_mode="iterative")
 
         batch_input_images = torch.stack(original_images)
         batch_noisy_images = torch.stack(noisy_images)
@@ -79,7 +79,7 @@ with tqdm(total=max_iters, desc=f"{batch_size=}") as pbar:
             calculate_batch_psnr(batch_input_images, output_image)
             losses, psnrs = estimate_loss()
             print(f"step {iter}: train loss {losses['train']:.5f}, val loss {losses['val']:.5f}")
-            print(f"step {iter}: psnr  {psnrs['train']:.5f}, val loss {psnrs['val']:.5f}")
+            print(f"step {iter}: train psnr  {psnrs['train']:.2f}, val psnr {psnrs['val']:.2f}")
         pbar.update(1)
 
 print("Final Training Loss:", loss.item())
