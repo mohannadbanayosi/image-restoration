@@ -7,6 +7,9 @@ from torchvision import transforms
 from tqdm import tqdm
 
 
+training_dataset_index = 0
+epoch = 0
+
 transform_input = transforms.Compose([
     transforms.Resize((16, 16)),
     transforms.ToTensor()
@@ -39,7 +42,7 @@ def prepare_dataset(device, base_path):
     print(f"{len(training_dataset)=}")
     return training_dataset
 
-def get_batch(batch_size, training_dataset):
+def get_batch_random(batch_size, training_dataset):
     original_images = []
     noisy_images = []
     for _ in range(batch_size):
@@ -48,6 +51,23 @@ def get_batch(batch_size, training_dataset):
 
         original_images.append(input_image)
         noisy_images.append(noisy_input_image)
+    return original_images, noisy_images
+
+def get_batch(batch_size, training_dataset):
+    global training_dataset_index, epoch
+    original_images = []
+    noisy_images = []
+    for _ in range(batch_size):
+        training_dataset_index = training_dataset_index % len(training_dataset)
+        if training_dataset_index == 0:
+            epoch += 1
+        image_name = training_dataset[training_dataset_index]
+        input_image, noisy_input_image = image_name
+
+        original_images.append(input_image)
+        noisy_images.append(noisy_input_image)
+
+        training_dataset_index += 1
     return original_images, noisy_images
 
 def calculate_psnr(base_image, modified_image):
