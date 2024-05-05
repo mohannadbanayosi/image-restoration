@@ -46,8 +46,7 @@ def get_batch_random(batch_size, training_dataset):
     original_images = []
     noisy_images = []
     for _ in range(batch_size):
-        image_name = random.choice(training_dataset)
-        input_image, noisy_input_image = image_name
+        input_image, noisy_input_image = random.choice(training_dataset)
 
         original_images.append(input_image)
         noisy_images.append(noisy_input_image)
@@ -61,8 +60,7 @@ def get_batch(batch_size, training_dataset):
         training_dataset_index = training_dataset_index % len(training_dataset)
         if training_dataset_index == 0:
             epoch += 1
-        image_name = training_dataset[training_dataset_index]
-        input_image, noisy_input_image = image_name
+        input_image, noisy_input_image = training_dataset[training_dataset_index]
 
         original_images.append(input_image)
         noisy_images.append(noisy_input_image)
