@@ -1,4 +1,6 @@
 import time
+from matplotlib import pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -9,7 +11,7 @@ from model import DenoisingAutoencoder
 batch_size = 256
 learning_rate = 0.0005
 max_iters = 20000
-eval_interval = 1000
+eval_interval = int(max_iters/20)
 eval_iters = 20
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
@@ -61,6 +63,17 @@ def estimate_loss():
     return final_losses, final_psnrs
 
 with tqdm(total=max_iters, desc=f"{batch_size=}") as pbar:
+    plots = {
+        "loss": {
+            "training": [],
+            "validation": []
+        },
+        "psnr": {
+            "training": [],
+            "validation": []
+        }
+    }
+
     for iter in range(max_iters):
         original_images, noisy_images = get_batch(batch_size, training_dataset, selection_mode="iterative")
 
@@ -80,11 +93,27 @@ with tqdm(total=max_iters, desc=f"{batch_size=}") as pbar:
             losses, psnrs = estimate_loss()
             print(f"step {iter}: train loss {losses['train']:.5f}, val loss {losses['val']:.5f}")
             print(f"step {iter}: train psnr  {psnrs['train']:.2f}, val psnr {psnrs['val']:.2f}")
+            plots["loss"]["training"].append(losses["train"])
+            plots["loss"]["validation"].append(losses["val"])
+            plots["psnr"]["training"].append(psnrs["train"])
+            plots["psnr"]["validation"].append(psnrs["val"])
         pbar.update(1)
 
 print("Final Training Loss:", loss.item())
 
+timestamp = int(time.time())
+
+for plot_type in ("loss", "psnr"):
+    y_training = plots[plot_type]["training"]
+    y_validation = plots[plot_type]["validation"]
+    plt.plot(y_training, label = "Training")
+    plt.plot(y_validation, label = "Validation")
+    plt.ylabel(plot_type)
+    plt.legend()
+    plt.savefig(f"graphs/{plot_type}_{timestamp}.png")
+    plt.clf()
+
 final_loss = "{:.6f}".format(loss.item()).replace(".", "")
-model_resource_path = f"model_resources/model_image_{int(time.time())}_{final_loss}.pth"
+model_resource_path = f"model_resources/model_image_{timestamp}_{final_loss}.pth"
 print(f"Saving model under {model_resource_path}")
 torch.save(model.state_dict(), model_resource_path)
