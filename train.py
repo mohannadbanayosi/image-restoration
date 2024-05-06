@@ -110,7 +110,7 @@ for plot_type in ("loss", "psnr"):
     plt.plot(y_validation, label = "Validation")
     plt.ylabel(plot_type)
     plt.legend()
-    plt.savefig(f"graphs/{plot_type}_{timestamp}.png")
+    plt.savefig(f"graphs/{timestamp}_{plot_type}.png")
     plt.clf()
 
 final_loss = "{:.6f}".format(loss.item()).replace(".", "")
