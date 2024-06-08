@@ -43,7 +43,7 @@ print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
 
 @torch.no_grad()
 def calculate_batch_psnr(batch_input_images, output_image):
-    psnrs = torch.zeros(batch_size)
+    psnrs = torch.zeros(batch_input_images.size(0))
     for i in range(len(batch_input_images)):
         input_img_np = batch_input_images[i].cpu().numpy().transpose((1, 2, 0))
         output_img_np = output_image[i].cpu().numpy().transpose((1, 2, 0))
@@ -63,7 +63,6 @@ plots = {
     }
 
 def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=25):
-    # TODO: calculate their PSNR too
     # TODO: calculate SSIM too
     for epoch in range(num_epochs):
         model.train()
