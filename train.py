@@ -1,15 +1,19 @@
+# TODO: fix ordering of the imports
 import time
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, random_split
+from torchvision import datasets
 from tqdm import tqdm
-from dataset import calculate_psnr, get_batch, prepare_dataset
+from dataset import calculate_psnr, get_batch, prepare_dataset, transform_input
 from model import DenoisingAutoencoder
 
+# TODO: add to HP: degree of noise
 # Hyperparameters
-batch_size = 256
-learning_rate = 0.0005
+batch_size = 64
+learning_rate = 0.00001
 max_iters = 20000
 eval_interval = int(max_iters/20)
 eval_iters = 20
@@ -24,11 +28,18 @@ print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-dataset = prepare_dataset(device, "IMAGES_PATH")
-n = int(0.9*len(dataset))
-training_dataset = dataset[:n]
-validation_dataset = dataset[n:]
-print(f"{len(training_dataset)=}", f"{len(validation_dataset)=}")
+image_dataset = datasets.ImageFolder(root="/Users/mohannadalbanayosy/Projects/images/entire", transform=transform_input)
+
+# TODO: reverse and try
+
+train_size = int(0.9 * len(image_dataset))
+val_size = len(image_dataset) - train_size
+train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
+
 
 @torch.no_grad()
 def calculate_batch_psnr(batch_input_images, output_image):
@@ -40,32 +51,7 @@ def calculate_batch_psnr(batch_input_images, output_image):
     return psnrs.mean()
 
 
-@torch.no_grad()
-def estimate_loss():
-    final_losses = {}
-    final_psnrs = {}
-    model.eval()
-
-    for split in ["train", "val"]:
-        losses = torch.zeros(eval_iters)
-        psnrs = torch.zeros(eval_iters)
-        for k in range(eval_iters):
-            original_images, noisy_images = get_batch(batch_size, training_dataset if split == "train" else validation_dataset, selection_mode="random")
-            batch_input_images = torch.stack(original_images)
-            batch_noisy_images = torch.stack(noisy_images)
-            output_image = model(batch_noisy_images)
-            loss = criterion(output_image, batch_input_images)
-            psnr = calculate_batch_psnr(batch_input_images, output_image)
-            losses[k] = loss.item()
-            psnrs[k] = psnr
-        final_losses[split] = losses.mean()
-        final_psnrs[split] = psnrs.mean()
-
-    model.train()
-    return final_losses, final_psnrs
-
-with tqdm(total=max_iters, desc=f"{batch_size=}") as pbar:
-    plots = {
+plots = {
         "loss": {
             "training": [],
             "validation": []
@@ -76,32 +62,58 @@ with tqdm(total=max_iters, desc=f"{batch_size=}") as pbar:
         }
     }
 
-    for iter in range(max_iters):
-        original_images, noisy_images = get_batch(batch_size, training_dataset, selection_mode="iterative")
+def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=25):
+    # TODO: calculate their PSNR too
+    # TODO: calculate SSIM too
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
+        running_loss_val = 0.0
+        running_psnrs = 0.0
+        running_psnrs_val = 0.0
+        for inputs, _ in tqdm(dataloader):
+            inputs = inputs.to(device)
+            noisy_inputs = inputs + 0.1 * torch.randn_like(inputs)
+            noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
 
-        batch_input_images = torch.stack(original_images)
-        batch_noisy_images = torch.stack(noisy_images)
+            optimizer.zero_grad()
+            outputs = model(noisy_inputs)
+            loss = criterion(outputs, inputs)
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item() * inputs.size(0)
+            psnrs = calculate_batch_psnr(inputs, outputs)
+            running_psnrs += psnrs * inputs.size(0)
+        
+        for inputs, _ in tqdm(valloader):
+            model.eval()
+            inputs = inputs.to(device)
+            noisy_inputs = inputs + 0.1 * torch.randn_like(inputs)
+            noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
 
-        output_image = model(batch_noisy_images)
+            outputs = model(noisy_inputs)
+            loss = criterion(outputs, inputs)
+            
+            running_loss_val += loss.item() * inputs.size(0)
+            psnrs = calculate_batch_psnr(inputs, outputs)
+            running_psnrs_val += psnrs * inputs.size(0)
+        
+        epoch_loss = running_loss / len(dataloader.dataset)
+        epoch_loss_val = running_loss_val / len(valloader.dataset)
+        epoch_psnr = running_psnrs / len(dataloader.dataset)
+        epoch_psnr_val = running_psnrs_val / len(valloader.dataset)
+        print(f'Epoch {epoch}/{num_epochs - 1}, Loss: {epoch_loss:.4f}, PSNR: {epoch_psnr:.4f}')
+        print(f'Epoch val {epoch}/{num_epochs - 1}, Loss: {epoch_loss_val:.4f}, PSNR: {epoch_psnr_val:.4f}')
+        plots["loss"]["training"].append(epoch_loss)
+        plots["loss"]["validation"].append(epoch_loss_val)
+        plots["psnr"]["training"].append(epoch_psnr)
+        plots["psnr"]["validation"].append(epoch_psnr_val)
+    return epoch_loss_val
 
-        loss = criterion(output_image, batch_input_images)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+final_val_loss = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=14)
 
-        if iter % eval_interval == 0:
-            print(f"Step {iter}: Training Loss:", loss.item())
-            calculate_batch_psnr(batch_input_images, output_image)
-            losses, psnrs = estimate_loss()
-            print(f"step {iter}: train loss {losses['train']:.5f}, val loss {losses['val']:.5f}")
-            print(f"step {iter}: train psnr  {psnrs['train']:.2f}, val psnr {psnrs['val']:.2f}")
-            plots["loss"]["training"].append(losses["train"])
-            plots["loss"]["validation"].append(losses["val"])
-            plots["psnr"]["training"].append(psnrs["train"])
-            plots["psnr"]["validation"].append(psnrs["val"])
-        pbar.update(1)
-
-print("Final Training Loss:", loss.item())
+print("Final Training Loss:", final_val_loss)
 
 timestamp = int(time.time())
 
@@ -115,7 +127,9 @@ for plot_type in ("loss", "psnr"):
     plt.savefig(f"graphs/{timestamp}_{plot_type}.png")
     plt.clf()
 
-final_loss = "{:.6f}".format(loss.item()).replace(".", "")
-model_resource_path = f"model_resources/model_image_{timestamp}_{final_loss}.pth"
+final_loss = "{:.6f}".format(final_val_loss).replace(".", "")
+# TODO: add to model name: loss and degree of noise
+# TODO: write metadata file with HPs
+model_resource_path = f"model_resources/model_image_{timestamp}_{0}.pth"
 print(f"Saving model under {model_resource_path}")
 torch.save(model.state_dict(), model_resource_path)
