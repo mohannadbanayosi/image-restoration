@@ -9,6 +9,7 @@ from torchvision import datasets
 from tqdm import tqdm
 from dataset import calculate_psnr, get_batch, prepare_dataset, transform_input
 from model import DenoisingAutoencoder
+from torchmetrics.image import StructuralSimilarityIndexMeasure
 
 # TODO: add to HP: degree of noise
 # Hyperparameters
@@ -27,6 +28,7 @@ print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 # TODO: check possibility to switch to perceptual or adversarial loss
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
 image_dataset = datasets.ImageFolder(root="IMAGES_PATH", transform=transform_input)
 
@@ -59,17 +61,23 @@ plots = {
         "psnr": {
             "training": [],
             "validation": []
+        },
+        "ssim": {
+            "training": [],
+            "validation": []
         }
     }
 
 def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=25):
-    # TODO: calculate SSIM too
+    # TODO: use already implemented function to add noise instead of duplicating the code here
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
         running_loss_val = 0.0
         running_psnrs = 0.0
         running_psnrs_val = 0.0
+        running_ssim = 0.0
+        running_ssim_val = 0.0
         for inputs, _ in tqdm(dataloader):
             inputs = inputs.to(device)
             noisy_inputs = inputs + 0.1 * torch.randn_like(inputs)
@@ -80,10 +88,14 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
             loss = criterion(outputs, inputs)
             loss.backward()
             optimizer.step()
+
+            ssim_value = ssim(outputs, inputs)
             
             running_loss += loss.item() * inputs.size(0)
             psnrs = calculate_batch_psnr(inputs, outputs)
             running_psnrs += psnrs * inputs.size(0)
+            running_ssim += ssim_value.item() * inputs.size(0)
+
         
         for inputs, _ in tqdm(valloader):
             model.eval()
@@ -93,21 +105,28 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
 
             outputs = model(noisy_inputs)
             loss = criterion(outputs, inputs)
+
+            ssim_value = ssim(outputs, inputs)
             
             running_loss_val += loss.item() * inputs.size(0)
             psnrs = calculate_batch_psnr(inputs, outputs)
             running_psnrs_val += psnrs * inputs.size(0)
+            running_ssim_val += ssim_value.item() * inputs.size(0)
         
         epoch_loss = running_loss / len(dataloader.dataset)
         epoch_loss_val = running_loss_val / len(valloader.dataset)
         epoch_psnr = running_psnrs / len(dataloader.dataset)
         epoch_psnr_val = running_psnrs_val / len(valloader.dataset)
-        print(f'Epoch {epoch}/{num_epochs - 1}, Loss: {epoch_loss:.4f}, PSNR: {epoch_psnr:.4f}')
-        print(f'Epoch val {epoch}/{num_epochs - 1}, Loss: {epoch_loss_val:.4f}, PSNR: {epoch_psnr_val:.4f}')
+        epoch_ssim = running_ssim / len(dataloader.dataset)
+        epoch_ssim_val = running_ssim_val / len(valloader.dataset)
+        print(f'Epoch {epoch}/{num_epochs - 1}, Loss: {epoch_loss:.4f}, PSNR: {epoch_psnr:.4f}, SSIM: {epoch_ssim:.4f}')
+        print(f'Epoch val {epoch}/{num_epochs - 1}, Loss: {epoch_loss_val:.4f}, PSNR: {epoch_psnr_val:.4f}, SSIM: {epoch_ssim_val:.4f}')
         plots["loss"]["training"].append(epoch_loss)
         plots["loss"]["validation"].append(epoch_loss_val)
         plots["psnr"]["training"].append(epoch_psnr)
         plots["psnr"]["validation"].append(epoch_psnr_val)
+        plots["ssim"]["training"].append(epoch_ssim)
+        plots["ssim"]["validation"].append(epoch_ssim_val)
     return epoch_loss_val
 
 final_val_loss = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=14)
@@ -116,7 +135,7 @@ print("Final Training Loss:", final_val_loss)
 
 timestamp = int(time.time())
 
-for plot_type in ("loss", "psnr"):
+for plot_type in ("loss", "psnr", "ssim"):
     y_training = plots[plot_type]["training"]
     y_validation = plots[plot_type]["validation"]
     plt.plot(y_training, label = "Training")
