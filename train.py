@@ -28,7 +28,7 @@ print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-image_dataset = datasets.ImageFolder(root="/Users/mohannadalbanayosy/Projects/images/entire", transform=transform_input)
+image_dataset = datasets.ImageFolder(root="IMAGES_PATH", transform=transform_input)
 
 # TODO: reverse and try
 
