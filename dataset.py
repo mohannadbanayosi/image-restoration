@@ -13,7 +13,7 @@ training_dataset_index = 0
 epoch = 0
 
 transform_input = transforms.Compose([
-    transforms.Resize((16, 16)),
+    transforms.Resize((64, 64)),
     transforms.ToTensor()
 ])
 
