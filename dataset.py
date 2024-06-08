@@ -7,6 +7,8 @@ from torchvision import transforms
 from tqdm import tqdm
 
 
+random.seed(42)
+
 training_dataset_index = 0
 epoch = 0
 

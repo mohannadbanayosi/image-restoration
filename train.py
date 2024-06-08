@@ -14,6 +14,8 @@ max_iters = 20000
 eval_interval = int(max_iters/20)
 eval_iters = 20
 
+torch.manual_seed(1337)
+
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 model = DenoisingAutoencoder().to(device)
 print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
