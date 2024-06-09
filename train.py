@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets
 from tqdm import tqdm
-from dataset import calculate_psnr, get_batch, prepare_dataset, transform_input
+from dataset import calculate_psnr, transform_input
 from model import DenoisingAutoencoder
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 
@@ -173,7 +173,6 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         plots["psnr"]["validation"].append(epoch_psnr_val)
         plots["ssim"]["training"].append(epoch_ssim)
         plots["ssim"]["validation"].append(epoch_ssim_val)
-    return epoch_loss_val
 
 if __name__ == '__main__':
     timestamp = int(time.time())
@@ -181,11 +180,9 @@ if __name__ == '__main__':
     
     save_metadata(f"{timestamp}_metadata.json")
     
-    final_val_loss, final_val_psnr, final_val_ssim = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=num_epochs)
+    train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=num_epochs)
 
     save_final(plots, f"{timestamp}_metrics.json")
-
-    print("Final Training Loss:", final_val_loss)
 
     for plot_type in ("loss", "psnr", "ssim"):
         y_training = plots[plot_type]["training"]
@@ -197,7 +194,6 @@ if __name__ == '__main__':
         plt.savefig(f"graphs/{timestamp}_{plot_type}.png")
         plt.clf()
 
-    final_loss = "{:.6f}".format(final_val_loss).replace(".", "")
     model_resource_path = f"model_resources/{timestamp}.pth"
     print(f"Saving model under {model_resource_path}")
     torch.save(model.state_dict(), model_resource_path)
