@@ -1,4 +1,5 @@
 # TODO: fix ordering of the imports
+import json
 import time
 from matplotlib import pyplot as plt
 import numpy as np
@@ -18,6 +19,8 @@ learning_rate = 0.00001
 max_iters = 20000
 eval_interval = int(max_iters/20)
 eval_iters = 20
+num_workers = 2
+num_epochs = 3
 
 torch.manual_seed(1337)
 
@@ -38,7 +41,7 @@ val_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transf
 # val_size = len(image_dataset) - train_size
 # train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
 
@@ -50,8 +53,49 @@ def calculate_batch_psnr(batch_input_images, output_image):
         input_img_np = batch_input_images[i].cpu().numpy().transpose((1, 2, 0))
         output_img_np = output_image[i].cpu().numpy().transpose((1, 2, 0))
         psnrs[i] = calculate_psnr(input_img_np, output_img_np)
-    return psnrs.mean()
+    return psnrs.mean().numpy()
 
+def save_metadata(filename="config_metadata.json"):
+    # TODO: improve and get rid of hard-coded values where possible
+    config = {
+        "dataset": {
+            "name": "CIFAR10",
+            "root_dir": "/data",
+            "split": "train",
+            "transform": {}
+        },
+        "dataloader": {
+            "batch_size": batch_size,
+            "shuffle": True,
+            "num_workers": num_workers
+        },
+        "model": {
+            "architecture": "DenoisingAutoencoder",
+            "encoder": [
+                {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "stride": 1, "padding": 2},
+                {"in_channels": 64, "out_channels": 128, "kernel_size": 5, "stride": 2, "padding": 2},
+                {"in_channels": 128, "out_channels": 256, "kernel_size": 5, "stride": 2, "padding": 2}
+            ],
+            "decoder": [
+                {"in_channels": 128, "out_channels": 64, "kernel_size": 2, "stride": 2},
+                {"in_channels": 64, "out_channels": 3, "kernel_size": 2, "stride": 2}
+            ]
+        },
+        "training": {
+            "num_epochs": num_epochs,
+            "loss_function": "MSELoss",
+            "optimizer": "Adam",
+            "learning_rate": learning_rate
+        },
+        "device": str(device)
+    }
+    with open(f"model_resources/{filename}", 'w') as f:
+        json.dump(config, f, indent=4)
+
+
+def save_final(final_res, filename="config_metrics.json"):
+    with open(f"model_resources/{filename}", 'w') as f:
+        json.dump(final_res, f, indent=4)
 
 plots = {
         "loss": {
@@ -130,11 +174,16 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
     return epoch_loss_val
 
 if __name__ == '__main__':
-    final_val_loss = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=42)
+    timestamp = int(time.time())
+    print(f"model will be saved under {timestamp}")
+    
+    save_metadata(f"{timestamp}_metadata.json")
+    
+    final_val_loss, final_val_psnr, final_val_ssim = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=num_epochs)
+
+    save_final(plots, f"{timestamp}_metrics.json")
 
     print("Final Training Loss:", final_val_loss)
-
-    timestamp = int(time.time())
 
     for plot_type in ("loss", "psnr", "ssim"):
         y_training = plots[plot_type]["training"]
@@ -147,8 +196,6 @@ if __name__ == '__main__':
         plt.clf()
 
     final_loss = "{:.6f}".format(final_val_loss).replace(".", "")
-    # TODO: add to model name: loss and degree of noise
-    # TODO: write metadata file with HPs
-    model_resource_path = f"model_resources/model_image_{timestamp}_{0}.pth"
+    model_resource_path = f"model_resources/{timestamp}.pth"
     print(f"Saving model under {model_resource_path}")
     torch.save(model.state_dict(), model_resource_path)
