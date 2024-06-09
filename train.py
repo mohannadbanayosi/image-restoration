@@ -30,13 +30,13 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
-image_dataset = datasets.ImageFolder(root="IMAGES_PATH", transform=transform_input)
+# image_dataset = datasets.ImageFolder(root="IMAGES_PATH", transform=transform_input)
+train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_input)
+val_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_input)
 
-# TODO: reverse and try
-
-train_size = int(0.9 * len(image_dataset))
-val_size = len(image_dataset) - train_size
-train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+# train_size = int(0.9 * len(image_dataset))
+# val_size = len(image_dataset) - train_size
+# train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
 test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
