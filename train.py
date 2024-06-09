@@ -22,29 +22,6 @@ num_workers = 2
 num_epochs = 3
 noise_level = 0.1
 
-torch.manual_seed(1337)
-
-device = "mps" if torch.backends.mps.is_available() else "cpu"
-model = DenoisingAutoencoder().to(device)
-print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
-
-# TODO: check possibility to switch to perceptual or adversarial loss
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
-
-# image_dataset = datasets.ImageFolder(root="IMAGES_PATH", transform=transform_input)
-train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_input)
-val_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_input)
-
-# train_size = int(0.9 * len(image_dataset))
-# val_size = len(image_dataset) - train_size
-# train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
-
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
-
 
 @torch.no_grad()
 def calculate_batch_psnr(batch_input_images, output_image):
@@ -177,6 +154,29 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
 if __name__ == '__main__':
     timestamp = int(time.time())
     print(f"model will be saved under {timestamp}")
+
+    torch.manual_seed(1337)
+
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    model = DenoisingAutoencoder().to(device)
+    print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
+
+    # TODO: check possibility to switch to perceptual or adversarial loss
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
+
+    # image_dataset = datasets.ImageFolder(root="IMAGES_PATH", transform=transform_input)
+    train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_input)
+    val_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_input)
+
+    # train_size = int(0.9 * len(image_dataset))
+    # val_size = len(image_dataset) - train_size
+    # train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
     
     save_metadata(f"{timestamp}_metadata.json")
     
