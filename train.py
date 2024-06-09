@@ -12,8 +12,7 @@ from dataset import calculate_psnr, get_batch, prepare_dataset, transform_input
 from model import DenoisingAutoencoder
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 
-# TODO: add to HP: degree of noise
-# Hyperparameters
+# Hyperparameters and config
 batch_size = 64
 learning_rate = 0.00001
 max_iters = 20000
@@ -21,6 +20,7 @@ eval_interval = int(max_iters/20)
 eval_iters = 20
 num_workers = 2
 num_epochs = 3
+noise_level = 0.1
 
 torch.manual_seed(1337)
 
@@ -71,14 +71,16 @@ def save_metadata(filename="config_metadata.json"):
         },
         "model": {
             "architecture": "DenoisingAutoencoder",
+            "noise_level": noise_level,
             "encoder": [
-                {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "stride": 1, "padding": 2},
-                {"in_channels": 64, "out_channels": 128, "kernel_size": 5, "stride": 2, "padding": 2},
-                {"in_channels": 128, "out_channels": 256, "kernel_size": 5, "stride": 2, "padding": 2}
+                {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "stride": 1, "padding": 1},
+                {"in_channels": 64, "out_channels": 128, "kernel_size": 3, "stride": 2, "padding": 1},
+                {"in_channels": 128, "out_channels": 256, "kernel_size": 3, "stride": 2, "padding": 1}
             ],
             "decoder": [
-                {"in_channels": 128, "out_channels": 64, "kernel_size": 2, "stride": 2},
-                {"in_channels": 64, "out_channels": 3, "kernel_size": 2, "stride": 2}
+                {"in_channels": 256, "out_channels": 128, "kernel_size": 4, "stride": 2, "padding": 1},
+                {"in_channels": 128, "out_channels": 64, "kernel_size": 4, "stride": 2, "padding": 1},
+                {"in_channels": 64, "out_channels": 3, "kernel_size": 2, "stride": 1, "padding": 1}
             ]
         },
         "training": {
@@ -124,7 +126,7 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         running_ssim_val = 0.0
         for inputs, _ in tqdm(dataloader):
             inputs = inputs.to(device)
-            noisy_inputs = inputs + 0.1 * torch.randn_like(inputs)
+            noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
             noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
 
             optimizer.zero_grad()
@@ -144,7 +146,7 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         for inputs, _ in tqdm(valloader):
             model.eval()
             inputs = inputs.to(device)
-            noisy_inputs = inputs + 0.1 * torch.randn_like(inputs)
+            noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
             noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
 
             outputs = model(noisy_inputs)
