@@ -38,7 +38,7 @@ train_size = int(0.9 * len(image_dataset))
 val_size = len(image_dataset) - train_size
 train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
 test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
 
@@ -129,25 +129,26 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         plots["ssim"]["validation"].append(epoch_ssim_val)
     return epoch_loss_val
 
-final_val_loss = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=14)
+if __name__ == '__main__':
+    final_val_loss = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=42)
 
-print("Final Training Loss:", final_val_loss)
+    print("Final Training Loss:", final_val_loss)
 
-timestamp = int(time.time())
+    timestamp = int(time.time())
 
-for plot_type in ("loss", "psnr", "ssim"):
-    y_training = plots[plot_type]["training"]
-    y_validation = plots[plot_type]["validation"]
-    plt.plot(y_training, label = "Training")
-    plt.plot(y_validation, label = "Validation")
-    plt.ylabel(plot_type)
-    plt.legend()
-    plt.savefig(f"graphs/{timestamp}_{plot_type}.png")
-    plt.clf()
+    for plot_type in ("loss", "psnr", "ssim"):
+        y_training = plots[plot_type]["training"]
+        y_validation = plots[plot_type]["validation"]
+        plt.plot(y_training, label = "Training")
+        plt.plot(y_validation, label = "Validation")
+        plt.ylabel(plot_type)
+        plt.legend()
+        plt.savefig(f"graphs/{timestamp}_{plot_type}.png")
+        plt.clf()
 
-final_loss = "{:.6f}".format(final_val_loss).replace(".", "")
-# TODO: add to model name: loss and degree of noise
-# TODO: write metadata file with HPs
-model_resource_path = f"model_resources/model_image_{timestamp}_{0}.pth"
-print(f"Saving model under {model_resource_path}")
-torch.save(model.state_dict(), model_resource_path)
+    final_loss = "{:.6f}".format(final_val_loss).replace(".", "")
+    # TODO: add to model name: loss and degree of noise
+    # TODO: write metadata file with HPs
+    model_resource_path = f"model_resources/model_image_{timestamp}_{0}.pth"
+    print(f"Saving model under {model_resource_path}")
+    torch.save(model.state_dict(), model_resource_path)
