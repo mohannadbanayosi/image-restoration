@@ -9,18 +9,20 @@ device = "cpu"
 
 base_path = "IMAGES_PATH"
 image_path = f"{base_path}/IMAGE_NAME.JPG"
-input_image = load_image(image_path).unsqueeze(0).to(device)
+input_image, original_size = load_image(image_path)
+original_width, original_height = original_size
+input_image = input_image.unsqueeze(0).to(device)
 
 noisy_input_image = introduce_noise(input_image, device)
 
 transform_output = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.ToTensor()
+    transforms.Resize((original_height, original_width)),
+    transforms.ToPILImage()
 ])
 
 output_path = f'{base_path}/output_noised.jpg'
-noisy_image_resized = transform_output(noisy_input_image.squeeze(0))
-transforms.ToPILImage()(noisy_image_resized).save(output_path)
+noisy_image_resized = noisy_input_image.squeeze(0)
+transform_output(noisy_image_resized).save(output_path)
 
 model = DenoisingAutoencoder().to(device)
 
@@ -36,7 +38,7 @@ with torch.no_grad():
     model.eval()
     output_image = model(noisy_input_image)
 
-output_image_resized = transform_output(output_image.squeeze(0))
+output_image_resized = output_image.squeeze(0)
 
 input_img_np = input_image.squeeze(0).numpy().transpose((1, 2, 0))
 output_img_np = output_image.squeeze(0).numpy().transpose((1, 2, 0))
@@ -44,6 +46,6 @@ psnr = calculate_psnr(input_img_np, output_img_np)
 print(f"Image: PSNR = {psnr:.2f}")
 
 output_path = f'{base_path}/output_denoised.jpg'
-transforms.ToPILImage()(output_image_resized).save(output_path)
+transform_output(output_image_resized).save(output_path)
 
 print("Denoised output image saved at:", output_path)
