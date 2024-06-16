@@ -32,5 +32,5 @@ Moving forward we should include SSIM evaluation and standard benchmark setup fo
 ### Graphs
 
 ![Loss](graphs/1717941258_loss.png)
-![PSNR](graphs/1717941258_loss.png)
+![PSNR](graphs/1717941258_psnr.png)
 ![SSIM](graphs/1717941258_ssim.png)
