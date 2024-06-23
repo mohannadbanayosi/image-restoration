@@ -19,8 +19,9 @@ transform_input = transforms.Compose([
 
 def load_image(image_path):
     image = Image.open(image_path)
+    original_size = image.size
     image = transform_input(image)
-    return image
+    return image, original_size
 
 
 def introduce_noise(input_image, device, noise_factor=0.3):
