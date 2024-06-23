@@ -34,3 +34,17 @@ Moving forward we should include SSIM evaluation and standard benchmark setup fo
 ![Loss](graphs/1717941258_loss.png)
 ![PSNR](graphs/1717941258_psnr.png)
 ![SSIM](graphs/1717941258_ssim.png)
+
+### Denoising example
+
+#### Noisy
+
+![Noisy Image](images/image_noised.jpg)
+
+#### Denoised
+
+![Denoised Image](images/image_denoised.jpg)
+
+#### Original
+
+![Original Image](images/image_original.jpeg)
