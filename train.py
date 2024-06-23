@@ -13,14 +13,11 @@ from model import DenoisingAutoencoder
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 
 # Hyperparameters and config
-batch_size = 64
+batch_size = 32
 learning_rate = 0.00001
-max_iters = 20000
-eval_interval = int(max_iters/20)
-eval_iters = 20
-num_workers = 2
-num_epochs = 3
-noise_level = 0.1
+num_workers = 1
+num_epochs = 100
+noise_level = 0.3
 
 
 @torch.no_grad()

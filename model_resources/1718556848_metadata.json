@@ -1,0 +1,70 @@
+{
+    "dataset": {
+        "name": "Local",
+        "root_dir": "/data",
+        "split": "train",
+        "transform": {}
+    },
+    "dataloader": {
+        "batch_size": 32,
+        "shuffle": true,
+        "num_workers": 1
+    },
+    "model": {
+        "architecture": "DenoisingAutoencoder",
+        "noise_level": 0.3,
+        "encoder": [
+            {
+                "in_channels": 3,
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "in_channels": 64,
+                "out_channels": 128,
+                "kernel_size": 3,
+                "stride": 2,
+                "padding": 1
+            },
+            {
+                "in_channels": 128,
+                "out_channels": 256,
+                "kernel_size": 3,
+                "stride": 2,
+                "padding": 1
+            }
+        ],
+        "decoder": [
+            {
+                "in_channels": 256,
+                "out_channels": 128,
+                "kernel_size": 4,
+                "stride": 2,
+                "padding": 1
+            },
+            {
+                "in_channels": 128,
+                "out_channels": 64,
+                "kernel_size": 4,
+                "stride": 2,
+                "padding": 1
+            },
+            {
+                "in_channels": 64,
+                "out_channels": 3,
+                "kernel_size": 2,
+                "stride": 1,
+                "padding": 1
+            }
+        ]
+    },
+    "training": {
+        "num_epochs": 100,
+        "loss_function": "MSELoss",
+        "optimizer": "Adam",
+        "learning_rate": 1e-05
+    },
+    "device": "mps"
+}

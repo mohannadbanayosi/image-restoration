@@ -29,7 +29,7 @@ model = DenoisingAutoencoder().to(device)
 print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 
 model_directory = "/Users/mohannadalbanayosy/Projects/mohannadbanayosi/image-restoration/model_resources"
-model_path = "model_image_1714932874_0000436.pth"
+model_path = "1718556848.pth"
 print(f"Loading model from {model_directory}/{model_path}")
 model.load_state_dict(torch.load(f"{model_directory}/{model_path}"))
 model.eval()
