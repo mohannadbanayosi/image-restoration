@@ -36,5 +36,5 @@ def calculate_psnr(base_image, modified_image):
     if mse == 0:
         return float('inf')
     max_pixel = 1.0
-    psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
+    psnr = 10 * np.log10(max_pixel ** 2 / mse)
     return psnr
