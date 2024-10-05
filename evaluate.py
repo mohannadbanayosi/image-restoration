@@ -14,7 +14,7 @@ input_image, original_size = load_image(image_path)
 original_width, original_height = original_size
 input_image = input_image.unsqueeze(0).to(device)
 
-noisy_input_image = introduce_noise(input_image, device)
+noisy_input_image = introduce_noise(input_image, device, 50)
 
 transform_output = transforms.Compose([
     transforms.Resize((original_height, original_width)),

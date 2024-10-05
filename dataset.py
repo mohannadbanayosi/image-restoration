@@ -12,6 +12,12 @@ random.seed(42)
 training_dataset_index = 0
 epoch = 0
 
+def introduce_noise(input_image, device="cpu", noise_factor=30):
+    scaled_noise_factor = noise_factor / 255.0
+    noisy_input_image = input_image + scaled_noise_factor * torch.randn_like(input_image).to(device)
+    noisy_input_image = torch.clamp(noisy_input_image, 0, 1).to(device)
+    return noisy_input_image
+
 transform_input = transforms.Compose([
     transforms.Resize((64, 64)),
     transforms.ToTensor()
@@ -22,12 +28,6 @@ def load_image(image_path):
     original_size = image.size
     image = transform_input(image)
     return image, original_size
-
-
-def introduce_noise(input_image, device, noise_factor=0.3):
-    noisy_input_image = input_image + noise_factor * torch.randn(input_image.size()).to(device)
-    noisy_input_image = torch.clamp(noisy_input_image, 0, 1).to(device)
-    return noisy_input_image
 
 
 def calculate_psnr(base_image, modified_image):
