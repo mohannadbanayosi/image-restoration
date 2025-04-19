@@ -113,6 +113,7 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         running_psnrs_val = 0.0
         running_ssim = 0.0
         running_ssim_val = 0.0
+
         for inputs, _ in tqdm(dataloader):
             inputs = inputs.to(device)
             noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
@@ -131,23 +132,23 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
             running_psnrs += psnrs * inputs.size(0)
             running_ssim += ssim_value.item() * inputs.size(0)
 
-        
-        for inputs, _ in tqdm(valloader):
-            model.eval()
-            inputs = inputs.to(device)
-            noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
-            noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
+        model.eval()
+        with torch.no_grad():
+            for inputs, _ in tqdm(valloader):
+                inputs = inputs.to(device)
+                noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
+                noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
 
-            outputs = model(noisy_inputs)
-            loss = criterion(outputs, inputs)
+                outputs = model(noisy_inputs)
+                loss = criterion(outputs, inputs)
 
-            ssim_value = ssim(outputs, inputs)
-            
-            running_loss_val += loss.item() * inputs.size(0)
-            psnrs = calculate_batch_psnr(inputs, outputs)
-            running_psnrs_val += psnrs * inputs.size(0)
-            running_ssim_val += ssim_value.item() * inputs.size(0)
-        
+                ssim_value = ssim(outputs, inputs)
+                
+                running_loss_val += loss.item() * inputs.size(0)
+                psnrs = calculate_batch_psnr(inputs, outputs)
+                running_psnrs_val += psnrs * inputs.size(0)
+                running_ssim_val += ssim_value.item() * inputs.size(0)
+
         epoch_loss = running_loss / len(dataloader.dataset)
         epoch_loss_val = running_loss_val / len(valloader.dataset)
         epoch_psnr = running_psnrs / len(dataloader.dataset)
@@ -168,6 +169,7 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         
         print(f'Epoch {epoch}/{num_epochs - 1}, Loss: {epoch_loss:.4f}, PSNR: {epoch_psnr:.4f}, SSIM: {epoch_ssim:.4f}')
         print(f'Epoch val {epoch}/{num_epochs - 1}, Loss: {epoch_loss_val:.4f}, PSNR: {epoch_psnr_val:.4f}, SSIM: {epoch_ssim_val:.4f}')
+
         plots["loss"]["training"].append(epoch_loss)
         plots["loss"]["validation"].append(epoch_loss_val)
         plots["psnr"]["training"].append(epoch_psnr)
