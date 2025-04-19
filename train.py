@@ -29,7 +29,7 @@ def calculate_batch_psnr(batch_input_images, output_image):
         psnrs[i] = calculate_psnr(input_img_np, output_img_np)
     return psnrs.mean().numpy()
 
-def save_metadata(filename="config_metadata.json"):
+def save_metadata(architecture_info, filename="config_metadata.json"):
     # TODO: improve and get rid of hard-coded values where possible
     config = {
         "dataset": {
@@ -46,16 +46,7 @@ def save_metadata(filename="config_metadata.json"):
         "model": {
             "architecture": "DenoisingAutoencoder",
             "noise_level": noise_level,
-            "encoder": [
-                {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "stride": 1, "padding": 1},
-                {"in_channels": 64, "out_channels": 128, "kernel_size": 3, "stride": 2, "padding": 1},
-                {"in_channels": 128, "out_channels": 256, "kernel_size": 3, "stride": 2, "padding": 1}
-            ],
-            "decoder": [
-                {"in_channels": 256, "out_channels": 128, "kernel_size": 4, "stride": 2, "padding": 1},
-                {"in_channels": 128, "out_channels": 64, "kernel_size": 4, "stride": 2, "padding": 1},
-                {"in_channels": 64, "out_channels": 3, "kernel_size": 2, "stride": 1, "padding": 1}
-            ]
+            "architecture_info": architecture_info
         },
         "training": {
             "num_epochs": num_epochs,
@@ -175,7 +166,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
     
-    save_metadata(f"{timestamp}_metadata.json")
+    save_metadata(model.get_model_architecture(),f"{timestamp}_metadata.json")
     
     train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=num_epochs)
 

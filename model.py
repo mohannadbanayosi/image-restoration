@@ -2,6 +2,31 @@ import torch.nn as nn
 
 
 class DenoisingAutoencoder(nn.Module):
+
+    def get_model_architecture(self):
+        """Extract model architecture information."""
+        architecture_info = {
+            "total_params": sum(p.numel() for p in self.parameters()),
+            "trainable_params": sum(p.numel() for p in self.parameters() if p.requires_grad),
+            "layers": []
+        }
+        
+        # Extract information about each layer
+        for name, module in self.named_modules():
+            if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+                layer_info = {
+                    "name": name,
+                    "type": module.__class__.__name__,
+                    "in_channels": module.in_channels,
+                    "out_channels": module.out_channels,
+                    "kernel_size": module.kernel_size,
+                    "stride": module.stride,
+                    "padding": module.padding
+                }
+                architecture_info["layers"].append(layer_info)
+        
+        return architecture_info
+
     def __init__(self):
         super(DenoisingAutoencoder, self).__init__()
         self.encoder = nn.Sequential(
