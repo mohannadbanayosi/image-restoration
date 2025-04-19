@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets
 from tqdm import tqdm
+import wandb
 from dataset import calculate_psnr, transform_input
 from model import DenoisingAutoencoder
 from torchmetrics.image import StructuralSimilarityIndexMeasure
@@ -18,6 +19,20 @@ learning_rate = 0.00001
 num_workers = 1
 num_epochs = 100
 noise_level = 0.3
+wandb_logging = False
+
+# Initialize wandb config
+wandb_config = {
+    "batch_size": batch_size,
+    "learning_rate": learning_rate,
+    "num_workers": num_workers,
+    "num_epochs": num_epochs,
+    "noise_level": noise_level,
+    "architecture": "DenoisingAutoencoder",
+    "dataset": "CIFAR10",
+    "optimizer": "Adam",
+    "loss_function": "MSELoss"
+}
 
 
 @torch.no_grad()
@@ -81,6 +96,15 @@ plots = {
 
 def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=25):
     # TODO: use already implemented function to add noise instead of duplicating the code here
+    if wandb_logging:
+        wandb_config["architecture_info"] = model.get_model_architecture()
+        wandb.init(
+            project="image-restoration",
+            config=wandb_config,
+            name=f"denoising_autoencoder_{int(time.time())}"
+        )
+        wandb.watch(model, log="all")
+    
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -130,6 +154,18 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         epoch_psnr_val = running_psnrs_val / len(valloader.dataset)
         epoch_ssim = running_ssim / len(dataloader.dataset)
         epoch_ssim_val = running_ssim_val / len(valloader.dataset)
+
+        if wandb_logging:
+            wandb.log({
+                "train/loss": epoch_loss,
+                "train/psnr": epoch_psnr,
+                "train/ssim": epoch_ssim,
+                "val/loss": epoch_loss_val,
+                "val/psnr": epoch_psnr_val,
+                "val/ssim": epoch_ssim_val,
+                "epoch": epoch
+            })
+        
         print(f'Epoch {epoch}/{num_epochs - 1}, Loss: {epoch_loss:.4f}, PSNR: {epoch_psnr:.4f}, SSIM: {epoch_ssim:.4f}')
         print(f'Epoch val {epoch}/{num_epochs - 1}, Loss: {epoch_loss_val:.4f}, PSNR: {epoch_psnr_val:.4f}, SSIM: {epoch_ssim_val:.4f}')
         plots["loss"]["training"].append(epoch_loss)
@@ -138,6 +174,19 @@ def train_model(model, dataloader, valloader, criterion, optimizer, num_epochs=2
         plots["psnr"]["validation"].append(epoch_psnr_val)
         plots["ssim"]["training"].append(epoch_ssim)
         plots["ssim"]["validation"].append(epoch_ssim_val)
+        
+        if wandb_logging and (epoch + 1) % 10 == 0:
+            checkpoint_path = f"model_resources/checkpoint_epoch_{epoch+1}.pth"
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': epoch_loss,
+            }, checkpoint_path)
+            wandb.save(checkpoint_path)
+
+    if wandb_logging:
+        wandb.finish()
 
 if __name__ == '__main__':
     timestamp = int(time.time())
