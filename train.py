@@ -16,11 +16,11 @@ from loss import CombinedLoss
 
 # Hyperparameters and config
 batch_size = 32
-learning_rate = 0.0001
+learning_rate = 2.5e-4
 num_workers = 1
 num_epochs = 60
 noise_level = 0.3
-weight_decay = 1e-4
+weight_decay = 2.5e-4
 patience = 10
 min_lr = 1e-6
 alpha = 0.3

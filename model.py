@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 
 class DenoisingAutoencoder(nn.Module):
@@ -29,28 +30,52 @@ class DenoisingAutoencoder(nn.Module):
 
     def __init__(self):
         super(DenoisingAutoencoder, self).__init__()
-        self.encoder = nn.Sequential(
+
+        self.enc1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(0.2),
+            nn.ReLU(0.2)
+        )
+        
+        self.enc2 = nn.Sequential(
             nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(0.2),
+            nn.ReLU(0.2)
+        )
+        
+        self.enc3 = nn.Sequential(
             nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(0.2),
+            nn.ReLU(0.2)
         )
 
-        self.decoder = nn.Sequential(
+        self.dec3 = nn.Sequential(
             nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(0.2),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(0.2),
-            nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(0.2)
+        )
+        
+        self.dec2 = nn.Sequential(
+            nn.ConvTranspose2d(256, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(0.2)
+        )
+        
+        self.dec1 = nn.Sequential(
+            nn.Conv2d(128, 3, kernel_size=3, stride=1, padding=1),
             nn.Sigmoid()  # TODO: experiment with `nn.Tanh`
         )
 
     def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
+        enc1_out = self.enc1(x)
+        enc2_out = self.enc2(enc1_out)
+        enc3_out = self.enc3(enc2_out)
+        
+        dec3_out = self.dec3(enc3_out)
+        dec3_out = torch.cat([dec3_out, enc2_out], dim=1)
+        
+        dec2_out = self.dec2(dec3_out)
+        dec2_out = torch.cat([dec2_out, enc1_out], dim=1)
+        
+        out = self.dec1(dec2_out)
+        return out
