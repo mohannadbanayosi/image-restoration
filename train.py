@@ -197,9 +197,9 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
             best_val_loss = epoch_loss_val
             best_model_state = model.state_dict().copy()
             patience_counter = 0
-            torch.save(model.state_dict(), "best_model.pth")
+            torch.save(model.state_dict(), f"{timestamp}_best_model.pth")
             if wandb_logging:
-                wandb.save("best_model.pth")
+                wandb.save(f"{timestamp}_best_model.pth")
         else:
             patience_counter += 1
             
@@ -220,7 +220,7 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
         plots["ssim"]["validation"].append(epoch_ssim_val)
         
         if wandb_logging and (epoch + 1) % 10 == 0:
-            checkpoint_path = f"model_resources/checkpoint_epoch_{epoch+1}.pth"
+            checkpoint_path = f"model_resources/{timestamp}_checkpoint_epoch_{epoch+1}.pth"
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
