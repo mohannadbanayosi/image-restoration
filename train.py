@@ -38,7 +38,7 @@ wandb_config = {
     "min_lr": min_lr,
     "alpha": alpha,
     "architecture": "DenoisingAutoencoder",
-    "dataset": "local/mountain",
+    "dataset": "BSDS300",
     "optimizer": "AdamW",
     "loss_function": "CombinedLoss",
     "scheduler": "ReduceLROnPlateau"
@@ -263,13 +263,8 @@ if __name__ == '__main__':
     
     ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
-    image_dataset = datasets.ImageFolder(root="mountain", transform=transform_input)
-    # train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_input)
-    # val_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_input)
-
-    train_size = int(0.9 * len(image_dataset))
-    val_size = len(image_dataset) - train_size
-    train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+    train_dataset = datasets.ImageFolder(root="BSDS300_train", transform=transform_input)
+    val_dataset = datasets.ImageFolder(root="BSDS300_test", transform=transform_input)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
