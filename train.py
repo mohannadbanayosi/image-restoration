@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets
 from tqdm import tqdm
 import wandb
-from dataset import calculate_psnr, transform_input
+from dataset import calculate_psnr, transform_input, introduce_noise
 from model import DenoisingAutoencoder
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 from loss import CombinedLoss
@@ -18,8 +18,8 @@ from loss import CombinedLoss
 batch_size = 32
 learning_rate = 2.5e-4
 num_workers = 1
-num_epochs = 60
-noise_level = 0.3
+num_epochs = 400
+noise_level = 30
 weight_decay = 2.5e-4
 patience = 10
 min_lr = 1e-6
@@ -63,7 +63,6 @@ def calculate_batch_metrics(batch_input_images, output_images, ssim_metric):
     return psnrs.mean().item(), ssims.mean().item()
 
 def save_metadata(architecture_info, filename="config_metadata.json"):
-    # TODO: improve and get rid of hard-coded values where possible
     config = {
         "dataset": {
             "name": "local/mountain",
@@ -117,7 +116,6 @@ plots = {
     }
 
 def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, scheduler, num_epochs=25):
-    # TODO: use already implemented function to add noise instead of duplicating the code here
     if wandb_logging:
         wandb_config["architecture_info"] = model.get_model_architecture()
         wandb.init(
@@ -142,8 +140,7 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
         
         for inputs, _ in tqdm(dataloader, desc=f"Epoch {epoch+1}/{num_epochs} - Training"):
             inputs = inputs.to(device)
-            noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
-            noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
+            noisy_inputs = introduce_noise(inputs, device=device, noise_factor=noise_level)
 
             optimizer.zero_grad()
             outputs = model(noisy_inputs)
@@ -160,8 +157,7 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
         with torch.no_grad():
             for inputs, _ in tqdm(valloader, desc=f"Epoch {epoch+1}/{num_epochs} - Validation"):
                 inputs = inputs.to(device)
-                noisy_inputs = inputs + noise_level * torch.randn_like(inputs)
-                noisy_inputs = torch.clamp(noisy_inputs, 0., 1.)
+                noisy_inputs = introduce_noise(inputs, device=device, noise_factor=noise_level)
 
                 outputs = model(noisy_inputs)
                 loss = criterion(outputs, inputs)
