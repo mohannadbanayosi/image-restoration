@@ -45,13 +45,22 @@ wandb_config = {
 }
 
 @torch.no_grad()
-def calculate_batch_psnr(batch_input_images, output_image):
-    psnrs = torch.zeros(batch_input_images.size(0))
-    for i in range(len(batch_input_images)):
+def calculate_batch_metrics(batch_input_images, output_images, ssim_metric):
+    """Calculate PSNR and SSIM for a batch of images"""
+    batch_size = batch_input_images.size(0)
+    psnrs = torch.zeros(batch_size)
+    ssims = torch.zeros(batch_size)
+    
+    for i in range(batch_size):
         input_img_np = batch_input_images[i].cpu().numpy().transpose((1, 2, 0))
-        output_img_np = output_image[i].cpu().numpy().transpose((1, 2, 0))
+        output_img_np = output_images[i].cpu().numpy().transpose((1, 2, 0))
         psnrs[i] = calculate_psnr(input_img_np, output_img_np)
-    return psnrs.mean().numpy()
+        ssims[i] = ssim_metric(
+            batch_input_images[i:i+1], 
+            output_images[i:i+1]
+        ).item()
+    
+    return psnrs.mean().item(), ssims.mean().item()
 
 def save_metadata(architecture_info, filename="config_metadata.json"):
     # TODO: improve and get rid of hard-coded values where possible
@@ -126,8 +135,8 @@ def train_model(model, dataloader, valloader, criterion, optimizer, scheduler, n
         model.train()
         running_loss = 0.0
         running_loss_val = 0.0
-        running_psnrs = 0.0
-        running_psnrs_val = 0.0
+        running_psnr = 0.0
+        running_psnr_val = 0.0
         running_ssim = 0.0
         running_ssim_val = 0.0
         
@@ -142,12 +151,10 @@ def train_model(model, dataloader, valloader, criterion, optimizer, scheduler, n
             loss.backward()
             optimizer.step()
 
-            ssim_value = ssim(outputs, inputs)
-            
+            batch_psnr, batch_ssim = calculate_batch_metrics(inputs, outputs, ssim)
             running_loss += loss.item() * inputs.size(0)
-            psnrs = calculate_batch_psnr(inputs, outputs)
-            running_psnrs += psnrs * inputs.size(0)
-            running_ssim += ssim_value.item() * inputs.size(0)
+            running_psnr += batch_psnr * inputs.size(0)
+            running_ssim += batch_ssim * inputs.size(0)
 
         model.eval()
         with torch.no_grad():
@@ -159,17 +166,15 @@ def train_model(model, dataloader, valloader, criterion, optimizer, scheduler, n
                 outputs = model(noisy_inputs)
                 loss = criterion(outputs, inputs)
 
-                ssim_value = ssim(outputs, inputs)
-                
+                batch_psnr, batch_ssim = calculate_batch_metrics(inputs, outputs, ssim)
                 running_loss_val += loss.item() * inputs.size(0)
-                psnrs = calculate_batch_psnr(inputs, outputs)
-                running_psnrs_val += psnrs * inputs.size(0)
-                running_ssim_val += ssim_value.item() * inputs.size(0)
+                running_psnr_val += batch_psnr * inputs.size(0)
+                running_ssim_val += batch_ssim * inputs.size(0)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         epoch_loss_val = running_loss_val / len(valloader.dataset)
-        epoch_psnr = running_psnrs / len(dataloader.dataset)
-        epoch_psnr_val = running_psnrs_val / len(valloader.dataset)
+        epoch_psnr = running_psnr / len(dataloader.dataset)
+        epoch_psnr_val = running_psnr_val / len(valloader.dataset)
         epoch_ssim = running_ssim / len(dataloader.dataset)
         epoch_ssim_val = running_ssim_val / len(valloader.dataset)
 
