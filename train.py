@@ -116,14 +116,14 @@ plots = {
         }
     }
 
-def train_model(model, dataloader, valloader, criterion, optimizer, scheduler, num_epochs=25):
+def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, scheduler, num_epochs=25):
     # TODO: use already implemented function to add noise instead of duplicating the code here
     if wandb_logging:
         wandb_config["architecture_info"] = model.get_model_architecture()
         wandb.init(
             project="image-restoration",
             config=wandb_config,
-            name=f"denoising_autoencoder_{int(time.time())}"
+            name=f"denoising_autoencoder_{timestamp}"
         )
         wandb.watch(model, log="all")
 
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     
     save_metadata(model.get_model_architecture(),f"{timestamp}_metadata.json")
     
-    best_model_state = train_model(model, train_loader, test_loader, criterion, optimizer, scheduler, num_epochs=num_epochs)
+    best_model_state = train_model(model, timestamp, train_loader, test_loader, criterion, optimizer, scheduler, num_epochs=num_epochs)
 
     model.load_state_dict(best_model_state)
 
