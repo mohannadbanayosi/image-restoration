@@ -19,7 +19,7 @@ def introduce_noise(input_image, device="cpu", noise_factor=30):
     return noisy_input_image
 
 transform_input = transforms.Compose([
-    transforms.Resize((64, 64)),
+    transforms.Resize((1024, 1024)) if torch.cuda.is_available() else transforms.Resize((256, 256)),
     transforms.ToTensor()
 ])
 
