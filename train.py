@@ -10,21 +10,34 @@ from torchvision import datasets
 from tqdm import tqdm
 import wandb
 from dataset import calculate_psnr, transform_input, introduce_noise
-from model import DenoisingAutoencoder
+from model import DenoisingAutoencoder, DenoisingAutoencoderMini
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 from loss import CombinedLoss
 
-# Hyperparameters and config
-batch_size = 32
-learning_rate = 2.5e-4
-num_workers = 1
-num_epochs = 400
-noise_level = 30
-weight_decay = 2.5e-4
-patience = 10
-min_lr = 1e-6
-alpha = 0.3
+is_gpu = torch.cuda.is_available()
 wandb_logging = False
+alpha = 0.3
+noise_level = 30
+
+# Hyperparameters and config
+if is_gpu:
+    batch_size = 8
+    learning_rate = 1e-4
+    num_workers = 2
+    num_epochs = 400
+    weight_decay = 1e-3
+    patience = 25
+    min_lr = 1e-6
+    model_architecture = "DenoisingAutoencoder"
+else:
+    batch_size = 4
+    learning_rate = 1e-4
+    num_workers = 1
+    num_epochs = 400
+    weight_decay = 5e-4
+    patience = 20
+    min_lr = 1e-6
+    model_architecture = "DenoisingAutoencoderMini"
 
 # Initialize wandb config
 wandb_config = {
@@ -37,7 +50,7 @@ wandb_config = {
     "patience": patience,
     "min_lr": min_lr,
     "alpha": alpha,
-    "architecture": "DenoisingAutoencoder",
+    "architecture": model_architecture,
     "dataset": "BSDS300",
     "optimizer": "AdamW",
     "loss_function": "CombinedLoss",
@@ -76,7 +89,7 @@ def save_metadata(architecture_info, filename="config_metadata.json"):
             "num_workers": num_workers
         },
         "model": {
-            "architecture": "DenoisingAutoencoder",
+            "architecture": model_architecture,
             "noise_level": noise_level,
             "architecture_info": architecture_info
         },
@@ -236,8 +249,12 @@ if __name__ == '__main__':
 
     torch.manual_seed(1337)
 
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
-    model = DenoisingAutoencoder().to(device)
+    if is_gpu:
+        device = "cuda"
+        model = DenoisingAutoencoder().to(device)
+    else:
+        device = "mps" if torch.backends.mps.is_available() else "cpu"
+        model = DenoisingAutoencoderMini().to(device)
     print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 
     criterion = CombinedLoss(alpha=alpha).to(device)
@@ -259,6 +276,7 @@ if __name__ == '__main__':
     
     ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
+    # TODO: have the transform be a partial function of the device
     train_dataset = datasets.ImageFolder(root="BSDS300_train", transform=transform_input)
     val_dataset = datasets.ImageFolder(root="BSDS300_test", transform=transform_input)
 
