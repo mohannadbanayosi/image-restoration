@@ -2,6 +2,38 @@
 
 A simple model to restore images from noise - and in the future from "out of focus" effects.
 
+## Denoising example
+
+### Noise Level σ = 50
+
+#### Landscape Model
+
+Noisy
+
+![Noisy Image](images/image_noised.jpg)
+
+Denoised
+
+![Denoised Image](images/image_denoised.jpg)
+
+Original
+
+![Original Image](images/image_original.jpeg)
+
+#### BSDS300 model
+
+Noisy
+
+![Noisy sImage](images/image_bsds300_noised.jpg)
+
+Denoised
+
+![Denoised Image](images/image_bsds300_denoised.jpg)
+
+Original
+
+![Original Image](images/image_bsds300_original.jpg)
+
 ## Benchmark Results
 
 RED30 comes from the paper [Xiao-Jiao Mao et al., 2016](https://arxiv.org/pdf/1606.08921).
@@ -38,35 +70,3 @@ Green (1745518710) is trained on BSDS300 and pink (1745509286) is trained on a l
 
 ![train/loss](graphs/50_train_loss.png)
 ![val/loss](graphs/50_val_loss.png)
-
-## Denoising example
-
-### Noise Level σ = 50
-
-#### Landscape Model
-
-Noisy
-
-![Noisy Image](images/image_noised.jpg)
-
-Denoised
-
-![Denoised Image](images/image_denoised.jpg)
-
-Original
-
-![Original Image](images/image_original.jpeg)
-
-#### BSDS300 model
-
-Noisy
-
-![Noisy sImage](images/image_bsds300_noised.jpg)
-
-Denoised
-
-![Denoised Image](images/image_bsds300_denoised.jpg)
-
-Original
-
-![Original Image](images/image_bsds300_original.jpg)
