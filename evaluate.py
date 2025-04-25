@@ -50,7 +50,7 @@ print(f"Image: PSNR = {psnr:.2f}")
 ssim_value = ssim(input_image, output_image)
 print(f"Image: SSIM = {ssim_value.item():.2f}")
 
-output_path = f'{base_path}/output_denoised.jpg'
+output_path = f'{base_path}/output_denoised_{model_path.split(".")[0]}.jpg'
 transform_output(output_image_resized).save(output_path)
 
 print("Denoised output image saved at:", output_path)
