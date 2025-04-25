@@ -44,7 +44,7 @@ RED30 comes from the paper [Xiao-Jiao Mao et al., 2016](https://arxiv.org/pdf/16
 | σ = 30      | 0.8019 | 0.9287 |
 | σ = 50      | 0.7167 | 0.8911 |
 
-### σ = 50
+## Training on noise level σ = 50
 
 Green (1745518710) is trained on BSDS300 and pink (1745509286) is trained on a local dataset of landscape images.
 
