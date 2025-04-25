@@ -10,7 +10,7 @@ RED30 comes from the paper [Xiao-Jiao Mao et al., 2016](https://arxiv.org/pdf/16
 
 | Noise Level | RED30 | DA_v1 |
 |-------------|-------|-------|
-| σ = 30      | 27.95 | 33.72 |
+| σ = 30      | 27.95 | 33.77 |
 | σ = 50      | 25.75 | 31.47 |
 
 ### PSNR
