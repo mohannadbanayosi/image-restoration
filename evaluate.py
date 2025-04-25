@@ -4,6 +4,7 @@ from model import DenoisingAutoencoder
 from torchvision import transforms
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 
+torch.manual_seed(43)
 
 # device = "mps" if torch.backends.mps.is_available() else "cpu"
 device = "mps"
