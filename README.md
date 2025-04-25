@@ -22,17 +22,9 @@ Original
 
 #### BSDS300 model
 
-Noisy
-
-![Noisy sImage](images/image_bsds300_noised.jpg)
-
-Denoised
-
-![Denoised Image](images/image_bsds300_denoised.jpg)
-
-Original
-
-![Original Image](images/image_bsds300_original.jpg)
+| Noisy | Denoised | Original |
+|-------|----------|----------|
+| ![Noisy Image](images/image_bsds300_noised.jpg) | ![Denoised Image](images/image_bsds300_denoised.jpg) | ![Original Image](images/image_bsds300_original.jpg) |
 
 ## Benchmark Results
 
