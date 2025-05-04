@@ -1,6 +1,7 @@
 # TODO: fix ordering of the imports
 import json
 import time
+import os
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -75,7 +76,10 @@ def calculate_batch_metrics(batch_input_images, output_images, ssim_metric):
     
     return psnrs.mean().item(), ssims.mean().item()
 
-def save_metadata(architecture_info, filename="config_metadata.json"):
+def save_metadata(architecture_info, model_id, filename="config_metadata.json"):
+    run_dir = os.path.join("model_resources", str(model_id))
+    os.makedirs(run_dir, exist_ok=True)
+    
     config = {
         "dataset": {
             "name": "local/mountain",
@@ -105,12 +109,15 @@ def save_metadata(architecture_info, filename="config_metadata.json"):
         },
         "device": str(device)
     }
-    with open(f"model_resources/{filename}", 'w') as f:
+    with open(os.path.join(run_dir, filename), 'w') as f:
         json.dump(config, f, indent=4)
 
 
-def save_final(final_res, filename="config_metrics.json"):
-    with open(f"model_resources/{filename}", 'w') as f:
+def save_final(final_res, model_id, filename="config_metrics.json"):
+    run_dir = os.path.join("model_resources", str(model_id))
+    os.makedirs(run_dir, exist_ok=True)
+    
+    with open(os.path.join(run_dir, filename), 'w') as f:
         json.dump(final_res, f, indent=4)
 
 plots = {
@@ -128,13 +135,16 @@ plots = {
         }
     }
 
-def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, scheduler, num_epochs=25):
+def train_model(model, model_id, dataloader, valloader, criterion, optimizer, scheduler, num_epochs=25):
+    run_dir = os.path.join("model_resources", str(model_id))
+    os.makedirs(run_dir, exist_ok=True)
+    
     if wandb_logging:
         wandb_config["architecture_info"] = model.get_model_architecture()
         wandb.init(
             project="image-restoration",
             config=wandb_config,
-            name=f"denoising_autoencoder_{timestamp}"
+            name=f"denoising_autoencoder_{model_id}"
         )
         wandb.watch(model, log="all")
 
@@ -206,9 +216,10 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
             best_val_loss = epoch_loss_val
             best_model_state = model.state_dict().copy()
             patience_counter = 0
-            torch.save(model.state_dict(), f"{timestamp}_best_model.pth")
+            model_path = os.path.join(run_dir, f"{model_id}_best_model.pth")
+            torch.save(model.state_dict(), model_path)
             if wandb_logging:
-                wandb.save(f"{timestamp}_best_model.pth")
+                wandb.save(f"{model_id}_best_model.pth")
         else:
             patience_counter += 1
             
@@ -228,8 +239,8 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
         plots["ssim"]["training"].append(epoch_ssim)
         plots["ssim"]["validation"].append(epoch_ssim_val)
         
-        if wandb_logging and (epoch + 1) % 10 == 0:
-            checkpoint_path = f"model_resources/{timestamp}_checkpoint_epoch_{epoch+1}.pth"
+        if wandb_logging and (epoch + 1) % 50 == 0:
+            checkpoint_path = os.path.join(run_dir, f"{model_id}_checkpoint_epoch_{epoch+1}.pth")
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
@@ -244,8 +255,8 @@ def train_model(model, timestamp, dataloader, valloader, criterion, optimizer, s
     return best_model_state
 
 if __name__ == '__main__':
-    timestamp = int(time.time())
-    print(f"model will be saved under {timestamp}")
+    model_id = f"{int(time.time())}_{noise_level}"
+    print(f"model will be saved under {model_id}")
 
     torch.manual_seed(1337)
 
@@ -284,13 +295,13 @@ if __name__ == '__main__':
     test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     print(f"{len(train_loader.dataset)=}", f"{len(test_loader.dataset)=}")
     
-    save_metadata(model.get_model_architecture(),f"{timestamp}_metadata.json")
+    save_metadata(model.get_model_architecture(), model_id, f"{model_id}_metadata.json")
     
-    best_model_state = train_model(model, timestamp, train_loader, test_loader, criterion, optimizer, scheduler, num_epochs=num_epochs)
+    best_model_state = train_model(model, model_id, train_loader, test_loader, criterion, optimizer, scheduler, num_epochs=num_epochs)
 
     model.load_state_dict(best_model_state)
 
-    save_final(plots, f"{timestamp}_metrics.json")
+    save_final(plots, model_id, f"{model_id}_metrics.json")
 
     for plot_type in ("loss", "psnr", "ssim"):
         y_training = plots[plot_type]["training"]
@@ -299,9 +310,9 @@ if __name__ == '__main__':
         plt.plot(y_validation, label = "Validation")
         plt.ylabel(plot_type)
         plt.legend()
-        plt.savefig(f"graphs/{timestamp}_{plot_type}.png")
+        plt.savefig(f"graphs/{model_id}_{plot_type}.png")
         plt.clf()
 
-    model_resource_path = f"model_resources/{timestamp}.pth"
+    model_resource_path = os.path.join("model_resources", model_id, f"{model_id}.pth")
     print(f"Saving model under {model_resource_path}")
     torch.save(model.state_dict(), model_resource_path)
