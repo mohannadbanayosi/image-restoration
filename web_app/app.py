@@ -20,7 +20,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Initialize the model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = DenoisingAutoencoder().to(device)
-model.load_state_dict(torch.load('../model_resources/1745477403/1745477403_best_model.pth', map_location=device))
+model.load_state_dict(torch.load('model_resources/1745477403/1745477403_best_model.pth', map_location=device))
 model.eval()
 
 def denoise_image(image):
